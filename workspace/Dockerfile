@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y --force-yes \
         php7.0-zip \
         php7.0-memcached \
         php7.0-gd \
-        php-dev \
+        php7.0-xdebug \
         libcurl4-openssl-dev \
         libedit-dev \
         libssl-dev \
@@ -46,35 +46,40 @@ RUN apt-get update && apt-get install -y --force-yes \
         git \
         curl \
         vim \
-        nano \
-        nodejs \
-        nodejs-dev \
-        npm
+        nano
 
 # Clean up, to free some space
 RUN apt-get clean
 
-# Install gulp and bower with NPM
-RUN npm install -g \
-    gulp \
-    bower
+# remove load xdebug extension (only load on phpunit command)
+RUN sed -i 's/^/;/g' /etc/php/7.0/cli/conf.d/20-xdebug.ini
 
-# Link the global gulp to be used locally
-RUN npm link gulp
-
-# Add a symbolic link for Node
-RUN ln -s /usr/bin/nodejs /usr/bin/node
-
-# Add an alias for PHPUnit
-RUN echo "alias phpunit='./vendor/bin/phpunit'" >> ~/.bashrc
+# Add bin folder of composer to PATH.
+RUN echo "export PATH=${PATH}:/var/www/laravel/vendor/bin" >> ~/.bashrc
 
 # Install Composer
 RUN curl -s http://getcomposer.org/installer | php \
-    && mv composer.phar /usr/local/bin/ \
-    && echo "alias composer='/usr/local/bin/composer.phar'" >> ~/.bashrc
+    && mv composer.phar /usr/local/bin/composer
 
-# Source the bash
-RUN . ~/.bashrc
+# Load xdebug Zend extension with phpunit command
+RUN echo "alias phpunit='php -dzend_extension=xdebug.so /var/www/laravel/vendor/bin/phpunit'" >> ~/.bashrc
+
+# Install nvm (Node Version Manager)
+RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.1/install.sh | bash
+
+ENV NVM_DIR=/root/.nvm
+
+# Install stable node
+RUN . ~/.nvm/nvm.sh \
+    && nvm install stable \
+    && nvm use stable \
+    && nvm alias stable \
+    && npm install -g gulp bower
+
+RUN ln -s /root/.nvm/versions/node/v6.2.2/bin/npm /usr/local/bin/npm \
+    && ln -s /root/.nvm/versions/node/v6.2.2/bin/node /usr/local/bin/node \
+    && ln -s /root/.nvm/versions/node/v6.2.2/bin/bower /usr/local/bin/bower \
+    && ln -s /root/.nvm/versions/node/v6.2.2/bin/gulp /usr/local/bin/gulp
 
 # Clean up
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
