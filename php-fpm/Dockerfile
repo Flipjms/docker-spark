@@ -22,7 +22,9 @@ RUN docker-php-ext-configure gd \
 # Install extensions using the helper script provided by the base image
 RUN docker-php-ext-install \
     pdo_mysql \
-    gd
+    gd \
+    bcmath \
+    && docker-php-ext-configure bcmath --enable-bcmath
 
 # Install Memcached for php 7
 RUN curl -L -o /tmp/memcached.tar.gz "https://github.com/php-memcached-dev/php-memcached/archive/php7.tar.gz" \
